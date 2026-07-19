@@ -1,0 +1,63 @@
+name: Deploy Print Drive to GitHub Pages
+
+# Builds the public web assets and the encrypted vault, refuses to publish if
+# any plaintext file is detected, then deploys with the official GitHub Pages
+# mechanism. This workflow never receives the Print Drive password and never
+# uses a personal access token.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**'
+  workflow_dispatch:
+
+# Minimum permissions required to publish a Pages artifact.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one deployment at a time; never cancel a running deploy.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run instance tests
+        run: node --test tests/*.test.mjs
+
+      - name: Guard against plaintext files
+        run: node scripts/check_public_files.mjs
+
+      - name: Build public artifact
+        # build_dist re-runs the plaintext guard against the staged dist tree
+        # and fails the job if the built artifact is not clean.
+        run: node scripts/build_dist.mjs
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

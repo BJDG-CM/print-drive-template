@@ -1,0 +1,17 @@
+{
+  "name": "print-drive-instance",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A single Print Drive instance generated from the print-drive-template GitHub Template Repository.",
+  "scripts": {
+    "init": "node scripts/init_vault.mjs",
+    "check": "node scripts/check_public_files.mjs",
+    "build": "node scripts/build_dist.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "verify": "npm run check && npm test && npm run build"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
