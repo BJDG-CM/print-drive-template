@@ -1,4 +1,38 @@
 (() => {
+    // Apply the stored theme synchronously, before the app module loads and
+    // before first paint, so no screen flashes the wrong theme. theme.js
+    // re-applies the identical result and wires the toggle + OS listener.
+    (function applyStoredThemeEarly() {
+        try {
+            const raw = localStorage.getItem('print-drive-theme');
+            const mode = raw === 'light' || raw === 'dark' || raw === 'system' ? raw : 'system';
+            document.documentElement.dataset.theme = mode;
+            const prefersDark = window.matchMedia
+                && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const resolved = mode === 'system' ? (prefersDark ? 'dark' : 'light') : mode;
+            const meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) {
+                meta.setAttribute('content', resolved === 'dark' ? '#0b1220' : '#1d4ed8');
+            }
+        } catch {
+            // A blocked localStorage/matchMedia still renders the default theme.
+        }
+    })();
+
+    // Mount the theme toggle and OS listener as soon as the DOM is ready,
+    // independently of whether the vault app or the uninitialized notice loads.
+    const themeReady = (document.readyState === 'loading'
+        ? new Promise((resolve) => document.addEventListener('DOMContentLoaded', resolve, { once: true }))
+        : Promise.resolve())
+        .then(() => import('./theme.js'))
+        .then(({ createThemeController }) => {
+            createThemeController().mount();
+        })
+        .catch((error) => {
+            console.warn('테마 컨트롤러를 불러오지 못했습니다.', error);
+        });
+    void themeReady;
+
     let pendingShareFragment = '';
     const captureShareFragment = () => {
         if (location.hash.startsWith('#share=')) {
@@ -109,7 +143,7 @@
             const owned = [];
             for (let index = 0; index < storage.length; index += 1) {
                 const key = storage.key(index);
-                if (key?.startsWith('print-drive-')) {
+                if (key?.startsWith('print-drive-') && key !== 'print-drive-theme') {
                     owned.push(key);
                 }
             }

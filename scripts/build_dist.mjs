@@ -29,6 +29,7 @@ export const BROWSER_ASSETS = Object.freeze([
     'bootstrap.js',
     'build_identity.js',
     'instance.js',
+    'theme.js',
     'app.js',
     'crypto.js',
     'file_errors.js',

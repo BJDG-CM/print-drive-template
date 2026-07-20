@@ -26,11 +26,11 @@
             <div class="centered-panel">
                 <div class="entry-brand small" aria-hidden="true">PD</div>
                 <div class="entry-heading">
-                    <p class="eyebrow">PRINT DRIVE</p>
-                    <h1 id="uninitialized-title">아직 초기화되지 않았습니다</h1>
-                    <p>이 Print Drive는 아직 초기화되지 않았습니다.</p>
+                    <h1 id="uninitialized-title">Print Drive</h1>
+                    <p>아직 초기화되지 않은 보관함입니다.</p>
                 </div>
-                <p class="uninitialized-note">저장소 관리자가 Print Drive Manager로 이 인스턴스를 초기화하면 파일 목록이 여기에 표시됩니다. 방문자는 비밀번호만 있으면 되며, GitHub 계정이나 권한은 필요하지 않습니다.</p>
+                <p class="uninitialized-note">관리자가 설정을 완료한 뒤 사용할 수 있습니다.</p>
+                <div class="theme-toggle-slot" data-theme-toggle></div>
             </div>
         </section>
 
@@ -38,9 +38,7 @@
             <div class="centered-panel auth-panel">
                 <div class="entry-brand small" aria-hidden="true">PD</div>
                 <div class="entry-heading">
-                    <p class="eyebrow">PRINT DRIVE</p>
-                    <h1 id="auth-title">전체 파일 열기</h1>
-                    <p>전체 파일을 열려면 비밀번호를 입력하세요.</p>
+                    <h1 id="auth-title">전체 보관함 열기</h1>
                 </div>
                 <p class="legacy-link-warning" id="legacy-link-warning" role="note" hidden>이전 형식의 파일 링크입니다. 전체 파일 비밀번호가 필요합니다.</p>
                 <form class="password-form" id="password-form">
@@ -52,15 +50,16 @@
                     </div>
                     <label class="remember-row">
                         <input id="remember-session" type="checkbox">
-                        <span>이 탭에서 새로고침해도 세션 유지 <small>공용 기기에서는 선택하지 마세요</small></span>
+                        <span>세션 유지 <small>공용 기기에서는 선택하지 마세요</small></span>
                     </label>
                     <p class="form-message" id="auth-error" role="alert" hidden></p>
                 </form>
-                <p class="public-password-warning">공용 기기에서는 전체 파일 비밀번호를 입력하지 마세요.</p>
+                <p class="public-password-warning">공용 기기에서는 공유 링크를 사용하세요.</p>
                 <details class="auth-help">
                     <summary>공유 링크 도움말</summary>
                     <p>새 공유 링크에서는 선택한 파일만 비밀번호 없이 열립니다. 이전 형식의 파일 링크는 전체 파일 비밀번호가 필요합니다.</p>
                 </details>
+                <div class="theme-toggle-slot" data-theme-toggle></div>
             </div>
         </section>
 
@@ -79,7 +78,10 @@
                         <span>공용 기기 · 공유 파일</span>
                     </div>
                 </div>
-                <span class="context-badge">선택 파일 공유</span>
+                <div class="public-header-actions">
+                    <div class="header-theme-slot" data-theme-toggle></div>
+                    <span class="context-badge">선택 파일 공유</span>
+                </div>
             </header>
             <div class="public-file-layout">
                 <div class="public-file-heading">
@@ -144,6 +146,7 @@
                     </div>
                 </div>
                 <div class="header-actions" aria-label="보관함 작업">
+                    <div class="header-theme-slot" data-theme-toggle></div>
                     <details class="overflow-menu">
                         <summary>더보기</summary>
                         <div class="overflow-menu-panel">

@@ -817,13 +817,12 @@ export async function readResponseBytesBounded(response, maxBytes, options = {})
         options.errorCode || 'BROWSER_SIZE_LIMIT',
         options.errorMessage || '네트워크 응답이 허용 크기를 초과했습니다.'
     );
-    const contentLengthHeader = response.headers?.get?.('content-length');
-    if (contentLengthHeader !== null && contentLengthHeader !== undefined) {
-        const contentLength = Number(contentLengthHeader);
-        if (!Number.isSafeInteger(contentLength) || contentLength < 0 || contentLength > maxBytes) {
-            throw fail();
-        }
-    }
+    // The HTTP Content-Length header is advisory and MUST NOT be treated as the
+    // real decrypted length: a proxy, range quirk, or hostile server can report
+    // a value larger (or smaller) than the actual body. We never fail early on
+    // it. The authoritative bound is enforced by streaming the body and
+    // aborting the moment the real decoded bytes exceed maxBytes; the exact
+    // size is then verified against the manifest by the caller.
     const reader = response.body?.getReader?.();
     if (!reader) {
         throw new PrintDriveCryptoError(

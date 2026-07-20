@@ -73,6 +73,17 @@ Manager can poll `build-meta.json` and compare `vault.manifestSha256` /
 `vault.revision` to confirm that GitHub Pages has deployed the latest encrypted
 update. The browser uses the same signal to drop a stale app shell.
 
+## Deploy fast path
+
+The Pages workflow (`.github/workflows/deploy.yml`, decided by
+`scripts/deploy_scope.mjs`) recognizes a Manager update: when a push changes
+only `files/**` or `print-drive.instance.json`, it takes a fast path that
+verifies the encrypted payload and deploys without re-running the full test
+suite. Any change that also touches application source, scripts, tests, docs, or
+the workflow forces the full verification path. The fast path still runs the
+plaintext/integrity guard, so a corrupt or half-published vault is blocked
+regardless of path.
+
 ## The Manager never asks the repository for secrets
 
 The Pages deployment holds no password and no token. The Manager supplies the

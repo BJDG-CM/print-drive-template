@@ -1,79 +1,107 @@
 # Print Drive — Instance Template
 
-This repository is a **GitHub Template Repository**. Generating a repository from
-it creates **one independent Print Drive instance**: a static, client-side
-web app that lets visitors unlock an encrypted vault with a password and then
-browse, preview, download, and print the files inside — with no server, no
-GitHub account, and no Manager app required on the visitor's side.
+This is a **GitHub Template Repository**. Use it to create your own independent
+**Print Drive** instance: a static, client-side site where visitors unlock an
+encrypted vault with a password and then browse, preview, download, and print
+the files inside — with no server and no GitHub account on the visitor's side.
 
-> Generated from the template, this repository ships **uninitialized**: it
-> contains the application and an empty vault, but no password and no files.
-> Until an administrator initializes it, the site shows
-> *"이 Print Drive는 아직 초기화되지 않았습니다."*
+A new repository made from this template ships **uninitialized**: it contains
+the app and an empty vault, but no password and no files. Until an administrator
+initializes it, the site shows a short "not initialized yet" notice.
 
-## What a visitor does
+## Who needs what
+
+| Role | Needs | Does not need |
+| --- | --- | --- |
+| **Visitor** | the site URL and the vault password | a GitHub account, GitHub login/OAuth, repository access, the Manager, any server |
+| **Administrator** | GitHub (to own the repo) and **Print Drive Manager** (to initialize and update the vault) | to share their password with the repo, Pages, or the workflow |
+
+Decryption happens entirely in the visitor's browser. The password is never sent
+anywhere and is never stored in the repository, on Pages, or in the workflow.
+
+## Set up your own instance
 
 ```
-open the site
-→ enter the Print Drive password
-→ decrypt the manifest locally in the browser
-→ browse files and folders
-→ preview, download, or print
+Use this template
+→ create a new repository
+→ Settings → Pages → Build and deployment → Source: GitHub Actions
+→ initialize the vault (Print Drive Manager, or the fallback init script)
+→ push files/manifest.enc and print-drive.instance.json
+→ confirm the deployment went out
+→ give visitors the site URL and the vault password
 ```
 
-Visitors never need a GitHub account, GitHub authorization, the Manager app, or
-repository access. Every decryption happens in the browser; the password never
-leaves the device and is never sent anywhere.
+### 1. Create the repository
 
-## What an administrator does
+Click **Use this template → Create a new repository**. Nothing in the template
+is owner-specific, so the copy is ready to initialize.
 
-Administrators use **Print Drive Manager** (a separate application, run on a
-trusted machine, authenticated to GitHub) to initialize the instance and to add
-or replace files. The Manager writes only three kinds of paths and never touches
-the application source — see [docs/MANAGER_CONTRACT.md](docs/MANAGER_CONTRACT.md).
+### 2. Turn on Pages
 
-## Repository layout
+In the new repository: **Settings → Pages → Build and deployment → Source →
+GitHub Actions**. Pushes to `main` then build and deploy automatically.
 
-| Path | Purpose |
-| --- | --- |
-| `index.html`, `*.js`, `styles.css`, `icon.svg`, `manifest.json`, `sw.js`, `robots.txt` | The static browser application (client-side only). |
-| `crypto.js`, `logical_path.js` | Encryption-format compatibility code the browser uses. |
-| `vault_format.mjs` | The Node-side encoder of the same format (used by the Manager and the init script; **never deployed**). |
-| `instance.js` | The public instance-metadata contract + the browser's initialization gate. |
-| `print-drive.instance.json` | Public, non-secret instance metadata. Ships as `{ "initialized": false }`. |
-| `files/` | The encrypted vault. Empty until initialized; then holds `manifest.enc` and opaque `<blob-id>.bin` objects. |
-| `scripts/` | Node tooling: `init_vault.mjs`, `build_dist.mjs`, `check_public_files.mjs`, `manager_paths.mjs`. |
-| `tests/` | `node --test` suite. |
-| `.github/workflows/deploy.yml` | GitHub Pages build + plaintext guard + deploy. |
-| `docs/` | Instance format, Manager contract, and security model. |
+### 3. Initialize the vault
 
-## Initializing an instance
-
-Print Drive Manager is the intended path. The included script is the documented
-reference/fallback so the template can be initialized without it. Run it on a
-**trusted machine**:
+Print Drive Manager is the intended tool. A fallback script is included so you
+can initialize without it, on a **trusted machine**:
 
 ```bash
 PRINT_DRIVE_PASSWORD='choose-a-strong-password' node scripts/init_vault.mjs
 ```
 
 This creates the first encrypted manifest for an **empty** vault locally and
-flips `print-drive.instance.json` to `initialized: true` (adding only public
-values such as the generated vault ID). The password is never written to disk.
+flips `print-drive.instance.json` to `initialized: true`, adding only public
+values (such as the generated vault ID). The password is never written to disk.
 Commit `files/manifest.enc` and `print-drive.instance.json`, then push.
 
-## Enabling GitHub Pages
+### 4. Confirm the deployment
 
-In the generated repository, set **Settings → Pages → Build and deployment →
-Source** to **GitHub Actions**. Every push to `main` then runs
-[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml), which:
+After the deploy workflow finishes, open the Pages URL. `build-meta.json`
+reports the deployed build id and (once initialized) the vault revision and
+manifest hash, so you can confirm the latest encrypted update is live.
 
-- runs the test suite,
-- runs the plaintext guard and **fails if any plaintext file is detected**,
-- builds only the public web assets and encrypted output,
-- stamps a build identity so the browser can confirm the deployed build,
-- uploads a Pages artifact and deploys it with the official Pages action,
-- uses minimum permissions and **never** receives the password or a token.
+### 5. Share access
+
+Give visitors the **site URL** and the **vault password** over a trusted
+channel. That is all a visitor ever needs.
+
+## Two things that are separate
+
+- **File updates** — adding or replacing files in the vault. Print Drive Manager
+  writes only `files/manifest.enc`, `files/<blob>.bin`, and
+  `print-drive.instance.json`. It **never modifies the application source**. See
+  [docs/MANAGER_CONTRACT.md](docs/MANAGER_CONTRACT.md).
+- **Application upgrades** — pulling newer app/format/workflow code. These are
+  deliberate, reviewed commits, not a side effect of adding a file.
+
+The deploy workflow keeps these fast and safe: an update that touches only
+`files/**` or `print-drive.instance.json` takes a fast path (payload
+verification + build + deploy); any change to app/source/scripts/tests/docs/
+workflow takes the full path (all checks + the test suite) before deploying.
+
+## Public vs. private
+
+- **The repository's visibility** (public or private) is your choice and is
+  separate from the next point.
+- **The encrypted blobs are effectively public.** Anyone who can reach the
+  deployed site can download the ciphertext and the manifest. Confidentiality
+  does **not** come from access control — it comes from your password.
+
+## Choose a strong password
+
+Because the ciphertext is downloadable, the only thing standing between it and a
+reader is the password and the key-derivation cost of guessing it. Use a long,
+high-entropy passphrase or a password-manager secret. **There is no server that
+can reset or recover a forgotten password** — losing it means losing access to
+the vault. See [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md).
+
+## Themes and accessibility
+
+The site supports **system / light / dark** themes (default: system, following
+the OS). The choice is stored locally only, applies to every screen, and
+survives a public-device cleanup. No external fonts, frameworks, or icon
+packages are used.
 
 ## Local development
 
@@ -81,12 +109,20 @@ Source** to **GitHub Actions**. Every push to `main` then runs
 npm run check   # plaintext / metadata guard
 npm test        # node --test suite
 npm run build   # produce dist/ locally
+npm run verify  # check + test + build
 ```
 
-## Security in one paragraph
+## Repository layout
 
-Encrypted blobs are **publicly downloadable** — anyone can fetch the ciphertext.
-Confidentiality rests entirely on **password strength** and the **KDF's
-resistance** to offline guessing (PBKDF2-HMAC-SHA-256). File names and logical
-paths are encrypted; Git paths are opaque. There is no central Print Drive
-server. See [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md) for the full model.
+| Path | Purpose |
+| --- | --- |
+| `index.html`, `*.js`, `styles.css`, `sw.js`, `manifest.json`, `icon.svg`, `robots.txt` | The static browser application (client-side only). |
+| `crypto.js`, `logical_path.js` | Encryption-format compatibility code the browser uses. |
+| `theme.js`, `instance.js` | Theme controller and the public instance-metadata / initialization gate. |
+| `vault_format.mjs` | Node-side encoder of the same format (Manager + init script; **never deployed**). |
+| `print-drive.instance.json` | Public, non-secret instance metadata. Ships as `{ "initialized": false }`. |
+| `files/` | The encrypted vault. Empty until initialized. |
+| `scripts/` | Node tooling: `init_vault.mjs`, `build_dist.mjs`, `check_public_files.mjs`, `deploy_scope.mjs`, `manager_paths.mjs`. |
+| `tests/` | `node --test` suite. |
+| `.github/workflows/deploy.yml` | Fast/full Pages build + plaintext guard + deploy. |
+| `docs/` | Instance format, Manager contract, and security model. |

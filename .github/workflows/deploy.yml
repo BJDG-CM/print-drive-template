@@ -1,63 +1,103 @@
 name: Deploy Print Drive to GitHub Pages
 
-# Builds the public web assets and the encrypted vault, refuses to publish if
-# any plaintext file is detected, then deploys with the official GitHub Pages
-# mechanism. This workflow never receives the Print Drive password and never
-# uses a personal access token.
+# Two mutually exclusive paths, exactly one of which builds the artifact:
+#   fast  - only files/** or print-drive.instance.json changed (Manager init or
+#           a normal file update): skip install + test, verify the encrypted
+#           payload, build, deploy.
+#   full  - any HTML/CSS/JS/format/scripts/tests/docs/workflow change, a
+#           workflow_dispatch, the first push, or an undetectable change set:
+#           run every check and the test suite before building.
+#
+# This workflow never receives the Print Drive password and never uses a
+# personal access token. Actions are pinned to verified commit SHAs.
 
 on:
   push:
     branches: [main]
-    paths:
-      - '**'
   workflow_dispatch:
 
-# Minimum permissions required to publish a Pages artifact.
+# Minimum permissions by default; only the deploy job may write Pages.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
-# Allow one deployment at a time; never cancel a running deploy.
+# Cancel an older, still-running deploy on the same ref when a new push arrives.
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        # Full history so the before..after change set can be diffed reliably.
+        # The fast path's savings come from skipping install and the test suite,
+        # not from checkout depth.
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '20'
 
-      - name: Run instance tests
-        run: node --test tests/*.test.mjs
+      - name: Determine deploy scope
+        id: scope
+        env:
+          PD_EVENT_NAME: ${{ github.event_name }}
+          PD_BEFORE_SHA: ${{ github.event.before }}
+          PD_AFTER_SHA: ${{ github.sha }}
+        run: node scripts/deploy_scope.mjs
 
-      - name: Guard against plaintext files
+      # ---------- FAST path (instance content only) ----------
+      - name: Fast path - verify encrypted payload
+        if: steps.scope.outputs.mode == 'fast'
         run: node scripts/check_public_files.mjs
 
-      - name: Build public artifact
-        # build_dist re-runs the plaintext guard against the staged dist tree
-        # and fails the job if the built artifact is not clean.
+      - name: Fast path - build artifact
+        if: steps.scope.outputs.mode == 'fast'
         run: node scripts/build_dist.mjs
 
+      # ---------- FULL path (source-affecting changes) ----------
+      - name: Full path - public files + metadata guard
+        if: steps.scope.outputs.mode == 'full'
+        run: node scripts/check_public_files.mjs
+
+      - name: Full path - test suite
+        if: steps.scope.outputs.mode == 'full'
+        run: node --test tests/*.test.mjs
+
+      - name: Full path - build artifact
+        if: steps.scope.outputs.mode == 'full'
+        run: node scripts/build_dist.mjs
+
+      - name: Full path - verify build left tracked files clean
+        if: steps.scope.outputs.mode == 'full'
+        run: |
+          dirty="$(git status --porcelain)"
+          if [ -n "$dirty" ]; then
+            echo "Build modified tracked files:"
+            echo "$dirty"
+            exit 1
+          fi
+
+      # ---------- Common upload (exactly one artifact) ----------
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: dist
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

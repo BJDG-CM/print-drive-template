@@ -30,7 +30,7 @@ with **public, non-secret** values only. Example:
   "formatVersion": 1,
   "application": "print-drive",
   "initialized": true,
-  "vaultId": "cf85f48b2905169480529974093c1d24",
+  "vaultId": "0123456789abcdef0123456789abcdef",
   "vaultFormatVersion": 2,
   "owner": "example-owner",
   "repo": "print-drive-instance",
